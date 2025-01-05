@@ -88,3 +88,10 @@ local_settings.py
 .env
 .venv
 db.sqlite3
+
+# Ignore invoices folder where PDFs are saved
+invoices/
+
+# If PDFs are saved in a specific subdirectory (e.g., 'invoices/<date>/')
+invoices/*/*.pdf
+
