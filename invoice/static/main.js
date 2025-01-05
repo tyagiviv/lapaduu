@@ -1,5 +1,6 @@
 let rowCount = 1; // Counter for rows
 
+// Function to add description items dynamically
 function addDescriptionItems() {
     rowCount++; // Increment the row counter
 
@@ -38,6 +39,7 @@ function addDescriptionItems() {
     myDiv.appendChild(newRow);
 }
 
+// Function to calculate total for each item based on quantity, price, and discount
 function calculateTotal(input) {
     // Find the parent div of the input field
     var parentDiv = input.closest('.inputfieldStyledescription');
@@ -54,8 +56,30 @@ function calculateTotal(input) {
     parentDiv.querySelector('input[name="total"]').value = totalAmount.toFixed(2);
 }
 
-// Pass the URL to JavaScript from Django
+// Correctly pass the URLs into JavaScript using Django template tags
 var generateInvoiceUrl = "{% url 'generate_invoice' %}";  // Correct way to generate the URL
+var getNextInvoiceUrl = "{% url 'get_next_invoice_number' %}";  // Correctly inject get_next_invoice_number URL
+
+// Function to fetch the next invoice number from the backend
+function fetchNextInvoiceNumber() {
+    fetch(getNextInvoiceUrl)  // Use the dynamically generated URL here
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const nextInvoiceNumber = data.next_invoice_number;
+                document.getElementById('invoiceNumber').value = nextInvoiceNumber;
+            } else {
+                alert('Error fetching next invoice number');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('There was an error fetching the next invoice number');
+        });
+}
+
+
+// Function to create the invoice
 function createinvoice() {
     // Collect the basic client info
     var clientEmail = document.getElementById("clientEmail").value;
@@ -89,48 +113,47 @@ function createinvoice() {
         }
     }
 
-
     // Check if at least one item has been added
     if (descriptions.length === 0) {
         alert("Please add at least one description item!");
         return;
     }
 
-
-    // Make an AJAX request to the server
-    var xhr = new XMLHttpRequest();
-    xhr.open("POST", generateInvoiceUrl, true);  // Use the variable here
-    xhr.setRequestHeader("Content-Type", "application/json");
-    xhr.setRequestHeader("X-CSRFToken", document.querySelector('[name=csrfmiddlewaretoken]').value);
-
-    xhr.onreadystatechange = function () {
-        if (xhr.readyState == 4 && xhr.status == 200) {
-            var response = JSON.parse(xhr.responseText);
-            if (response.success) {
-                alert("Invoice created successfully! You can download it from: " + response.filename);
-
-                // Reset the form fields after successful invoice creation
-                resetForm();
-            } else {
-                alert("Error: " + response.error);
-            }
+    // Make an AJAX request to the server to generate the invoice
+    fetch(generateInvoiceUrl, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+            clientEmail: clientEmail,
+            invoiceDate: invoiceDate,
+            clientName: clientName,
+            clientAddress: clientAddress,
+            registrationCode: registrationCode,
+            dueDate: dueDate,
+            descriptions: descriptions,
+            quantities: quantities,
+            prices: prices,
+            discounts: discounts,
+            totals: totals
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert("Invoice created successfully! You can download it from: " + data.filename);
+            resetForm();
+            fetchNextInvoiceNumber();  // Fetch the next invoice number after successful creation
+        } else {
+            alert("Error: " + data.error);
         }
-    };
-
-    // Send the data to the server
-    xhr.send(JSON.stringify({
-        clientEmail: clientEmail,
-        invoiceDate: invoiceDate,
-        clientName: clientName,
-        clientAddress: clientAddress,
-        registrationCode: registrationCode,
-        dueDate: dueDate,
-        descriptions: descriptions,
-        quantities: quantities,
-        prices: prices,
-        discounts: discounts,
-        totals: totals
-    }));
+    })
+    .catch(error => {
+        console.error("Error:", error);
+        alert("There was an error creating the invoice");
+    });
 }
 
 // Function to reset the form fields
@@ -154,7 +177,6 @@ function resetForm() {
     const dueDateField = document.getElementById("dueDate");
     dueDateField.value = dueDateISO;
 
-
     // Reset description rows
     for (let i = 1; i <= rowCount; i++) {
         document.getElementById(`description${i}`).value = "";
@@ -167,4 +189,12 @@ function resetForm() {
     // Optionally, reset the row count if you want to start from the first row
     rowCount = 1;
     document.getElementById("spDiv").innerHTML = ''; // Clears any added rows dynamically
+
+   // Reload the page to refresh everything
+    location.reload(); // This reloads the page to reset and fetch the new invoice number
+
+    // Fetch the next invoice number after a short delay to ensure the page is fully loaded
+    setTimeout(function() {
+        fetchNextInvoiceNumber(); // Fetch the new invoice number
+    }, 500);  // Delay in milliseconds, you can adjust this value
 }

@@ -12,3 +12,15 @@ class Invoice(models.Model):
 
     def __str__(self):
         return f"Invoice #{self.invoice_number}"
+
+
+class Description(models.Model):
+    invoice = models.ForeignKey(Invoice, related_name="descriptions", on_delete=models.CASCADE)
+    description = models.CharField(max_length=255)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    discount = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.description} - {self.quantity} x {self.price}"

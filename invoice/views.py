@@ -10,10 +10,9 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table
 
-
 @login_required
 def generate_invoice(request):
-    # Get the next invoice number
+    # Get the next invoice number at the beginning
     invoice_number = get_next_invoice_number()
 
     if request.method == 'POST':
@@ -41,7 +40,7 @@ def generate_invoice(request):
             if not descriptions or not quantities or not prices or not discounts or not totals:
                 return JsonResponse({'error': 'Missing description data!'}, status=400)
 
-            invoice_number = get_next_invoice_number()
+            # Create the invoice with the generated invoice number
             total_amount = sum([float(total) for total in totals])
 
             invoice = Invoice.objects.create(
@@ -53,6 +52,7 @@ def generate_invoice(request):
                 due_date=due_date,
                 total_amount=total_amount
             )
+
 
             # Generate the PDF
             today = datetime.now().strftime("%Y-%m-%d")
@@ -89,9 +89,23 @@ def generate_invoice(request):
 
             doc.build(elements)
 
-            return JsonResponse({'success': True, 'filename': pdf_filename})
+            # Return the next invoice number in the response (after the invoice creation)
+            return JsonResponse({
+                'success': True,
+                'filename': pdf_filename,
+                'next_invoice_number': invoice_number + 1  # Increment the number for the next invoice
+            })
 
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON format'}, status=400)
     else:
-        return render(request, 'generator.html')
+        # Pass the current invoice number to the template
+        return render(request, 'generator.html', {'invoice_number': invoice_number})
+
+
+def get_next_invoice_number_view(request):
+    try:
+        next_invoice_number = get_next_invoice_number()  # Call the utility function
+        return JsonResponse({'success': True, 'next_invoice_number': next_invoice_number})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})

@@ -26,7 +26,6 @@ urlpatterns = [
     path('login/', accounts_views.login_view, name='login'),
     path('logout/', accounts_views.logout_view, name='logout'),
     path('', accounts_views.home_view, name='home'),  # Make this the main home page
-    path('generate_invoice/', invoice_views.generate_invoice, name='generate_invoice'),
     path('invoice/', include('invoice.urls')),
 
 ]
