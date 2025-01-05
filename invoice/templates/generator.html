@@ -26,6 +26,12 @@
         </form>
     </div>
 
+    <!-- Display Invoice Number -->
+    <div class="inputfieldStyle">
+        <label for="invoiceNumber"><b>Invoice Number:</b></label>
+        <input type="text" id="invoiceNumber" name="invoiceNumber" value="{{ invoice_number }}" readonly>
+    </div>
+
     <!-- Fields for client information -->
     <div class="inputfieldStyle">
         <label for="clientEmail"><b>Client's Email:</b></label>
@@ -95,6 +101,23 @@
         <button id="btn1" onclick="addDescriptionItems()">Add More Description Items</button>
         <button id="btn2" onclick="createinvoice()" style="margin-left: 10px;">Create Invoice</button>
     </div>
+
+    <!-- Hidden field to store the URL for generating invoices -->
+    <script>
+        var generateInvoiceUrl = "{% url 'generate_invoice' %}";
+
+        // Set the invoice date to today's date
+        const today = new Date();
+        const todayISO = today.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+        document.getElementById('invoiceDate').value = todayISO;
+
+        // Set the due date to two weeks from today
+        const dueDate = new Date();
+        dueDate.setDate(today.getDate() + 14); // Add 14 days
+        const dueDateISO = dueDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+        document.getElementById('dueDate').value = dueDateISO;
+
+    </script>
 
 </body>
 </html>

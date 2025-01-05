@@ -53,3 +53,118 @@ function calculateTotal(input) {
     // Set the total amount in the total input field
     parentDiv.querySelector('input[name="total"]').value = totalAmount.toFixed(2);
 }
+
+// Pass the URL to JavaScript from Django
+var generateInvoiceUrl = "{% url 'generate_invoice' %}";  // Correct way to generate the URL
+function createinvoice() {
+    // Collect the basic client info
+    var clientEmail = document.getElementById("clientEmail").value;
+    var invoiceDate = document.getElementById("invoiceDate").value;
+    var clientName = document.getElementById("clientName").value;
+    var clientAddress = document.getElementById("clientAddress").value;
+    var registrationCode = document.getElementById("registrationCode").value;
+    var dueDate = document.getElementById("dueDate").value;
+
+    // Collect description items (dynamically generated rows)
+    var descriptions = [];
+    var quantities = [];
+    var prices = [];
+    var discounts = [];
+    var totals = [];
+
+    for (let i = 1; i <= rowCount; i++) {
+        let description = document.getElementById(`description${i}`).value;
+        let quantity = document.getElementById(`quantity${i}`).value;
+        let price = document.getElementById(`price${i}`).value;
+        let discount = document.getElementById(`discount${i}`).value || "0"; // Default discount to 0 if empty
+        let total = document.getElementById(`total${i}`).value;
+
+        // Only collect non-empty rows
+        if (description && quantity && price && discount && total) {
+            descriptions.push(description);
+            quantities.push(quantity);
+            prices.push(price);
+            discounts.push(discount);
+            totals.push(total);
+        }
+    }
+
+
+    // Check if at least one item has been added
+    if (descriptions.length === 0) {
+        alert("Please add at least one description item!");
+        return;
+    }
+
+
+    // Make an AJAX request to the server
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", generateInvoiceUrl, true);  // Use the variable here
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.setRequestHeader("X-CSRFToken", document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState == 4 && xhr.status == 200) {
+            var response = JSON.parse(xhr.responseText);
+            if (response.success) {
+                alert("Invoice created successfully! You can download it from: " + response.filename);
+
+                // Reset the form fields after successful invoice creation
+                resetForm();
+            } else {
+                alert("Error: " + response.error);
+            }
+        }
+    };
+
+    // Send the data to the server
+    xhr.send(JSON.stringify({
+        clientEmail: clientEmail,
+        invoiceDate: invoiceDate,
+        clientName: clientName,
+        clientAddress: clientAddress,
+        registrationCode: registrationCode,
+        dueDate: dueDate,
+        descriptions: descriptions,
+        quantities: quantities,
+        prices: prices,
+        discounts: discounts,
+        totals: totals
+    }));
+}
+
+// Function to reset the form fields
+function resetForm() {
+    // Reset basic client information fields
+    document.getElementById("clientEmail").value = "";
+    document.getElementById("clientName").value = "";
+    document.getElementById("clientAddress").value = "";
+    document.getElementById("registrationCode").value = "";
+
+    // Reset invoice date to today's date
+    const today = new Date();
+    const todayISO = today.toISOString().split('T')[0];
+    const invoiceDateField = document.getElementById("invoiceDate");
+    invoiceDateField.value = todayISO;
+
+    // Reset due date to two weeks from today
+    const dueDate = new Date();
+    dueDate.setDate(today.getDate() + 14);
+    const dueDateISO = dueDate.toISOString().split('T')[0];
+    const dueDateField = document.getElementById("dueDate");
+    dueDateField.value = dueDateISO;
+
+
+    // Reset description rows
+    for (let i = 1; i <= rowCount; i++) {
+        document.getElementById(`description${i}`).value = "";
+        document.getElementById(`quantity${i}`).value = "";
+        document.getElementById(`price${i}`).value = "";
+        document.getElementById(`discount${i}`).value = "";
+        document.getElementById(`total${i}`).value = "";
+    }
+
+    // Optionally, reset the row count if you want to start from the first row
+    rowCount = 1;
+    document.getElementById("spDiv").innerHTML = ''; // Clears any added rows dynamically
+}
