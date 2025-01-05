@@ -119,6 +119,21 @@ function createinvoice() {
         return;
     }
 
+    // Prepare the invoice data to send via fetch
+    const invoiceData = {
+        clientEmail: clientEmail,
+        clientName: clientName,
+        clientAddress: clientAddress,
+        registrationCode: registrationCode,
+        invoiceDate: invoiceDate,
+        dueDate: dueDate,
+        descriptions: descriptions,
+        quantities: quantities,
+        prices: prices,
+        discounts: discounts,
+        totals: totals
+    };
+
     // Make an AJAX request to the server to generate the invoice
     fetch(generateInvoiceUrl, {
         method: "POST",
@@ -126,21 +141,17 @@ function createinvoice() {
             "Content-Type": "application/json",
             "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
         },
-        body: JSON.stringify({
-            clientEmail: clientEmail,
-            invoiceDate: invoiceDate,
-            clientName: clientName,
-            clientAddress: clientAddress,
-            registrationCode: registrationCode,
-            dueDate: dueDate,
-            descriptions: descriptions,
-            quantities: quantities,
-            prices: prices,
-            discounts: discounts,
-            totals: totals
-        })
+        body: JSON.stringify(invoiceData)
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Server error: ' + response.statusText);
+        }
+        return response.json();
+    })
+
+
+
     .then(data => {
         if (data.success) {
             alert("Invoice created successfully! You can download it from: " + data.filename);
@@ -155,6 +166,7 @@ function createinvoice() {
         alert("There was an error creating the invoice");
     });
 }
+
 
 // Function to reset the form fields
 function resetForm() {

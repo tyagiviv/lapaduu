@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from .utils import get_next_invoice_number
-from .models import Invoice
+from .models import Invoice, Description
 from datetime import datetime
 import os
 import json
@@ -53,6 +53,16 @@ def generate_invoice(request):
                 total_amount=total_amount
             )
 
+            # Create Description entries for the invoice
+            for i in range(len(descriptions)):
+                Description.objects.create(
+                    invoice=invoice,
+                    description=descriptions[i],
+                    quantity=quantities[i],
+                    price=prices[i],
+                    discount=discounts[i],
+                    total_amount=totals[i]
+                )
 
             # Generate the PDF
             today = datetime.now().strftime("%Y-%m-%d")
@@ -98,6 +108,10 @@ def generate_invoice(request):
 
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON format'}, status=400)
+        except Exception as e:
+            # Log the exception for debugging purposes
+            print(f"Error: {e}")
+            return JsonResponse({'error': 'An error occurred while processing your request'}, status=500)
     else:
         # Pass the current invoice number to the template
         return render(request, 'generator.html', {'invoice_number': invoice_number})
