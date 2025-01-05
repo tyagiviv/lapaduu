@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Home - TV Show Portal{% endblock %}
+
+{% block content %}
+<h1>Welcome to TV Show Portal</h1>
+{% if request.user.is_authenticated %}
+    <p>Hi {{ request.user.username }}, enjoy your favorite TV shows!</p>
+{% else %}
+    <p>Please <a href="/top/">log in</a> to access more features.</p>
+{% endif %}
+{% endblock %}

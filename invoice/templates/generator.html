@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <!-- Load static files -->
+    {% load static %}
+
+    <link rel="icon" href="{% static 'logo.png' %}">
+    <title>Invoice Generator</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <link rel='stylesheet' type='text/css' media='screen' href="{% static 'main.css' %}">
+    <script src="{% static 'main.js' %}"></script>
+</head>
+<body>
+
+    <div style="text-align: center;">
+        <img src="{% static 'logo.png' %}" alt="Logo" style="width: 150px; height: auto;">
+        <h1>Generate Your Invoice Here</h1>
+
+        <!-- Display Welcome Message and Logout Button -->
+        <p>Welcome, {{ user.username }}!</p>
+        <form action="{% url 'logout' %}" method="post">
+            {% csrf_token %}
+            <button type="submit">Logout</button>
+        </form>
+    </div>
+
+    <!-- Fields for client information -->
+    <div class="inputfieldStyle">
+        <label for="clientEmail"><b>Client's Email:</b></label>
+        <input type="email" id="clientEmail" name="clientEmail">
+    </div>
+
+    <div class="inputfieldStyle">
+        <label for="invoiceDate"><b>Invoice Date:</b></label>
+        <input type="date" id="invoiceDate" name="invoiceDate">
+    </div>
+
+    <div class="inputfieldStyle">
+        <label for="clientName"><b>Client's Name:</b></label>
+        <input type="text" id="clientName" name="clientName">
+    </div>
+
+    <div class="inputfieldStyle">
+        <label for="clientAddress"><b>Client's Address:</b></label>
+        <input type="text" id="clientAddress" name="clientAddress">
+    </div>
+
+    <div class="inputfieldStyle">
+        <label for="registrationCode"><b>Registration Code:</b></label>
+        <input type="text" id="registrationCode" name="registrationCode">
+    </div>
+
+    <div class="inputfieldStyle">
+        <label for="dueDate"><b>Due Date:</b></label>
+        <input type="date" id="dueDate" name="dueDate">
+    </div>
+
+    <!-- Description Section -->
+    <div id="descriptionContainer">
+        <div class="inputfieldStyledescription" id="row1">
+            <!-- First Row: Titles -->
+            <label for="description1"><b>Description</b></label>
+            <label for="quantity1"><b>Quantity / Hr</b></label>
+            <label for="price1"><b>Price</b></label>
+            <label for="discount1"><b>Discount %</b></label>
+            <label for="total1"><b>Total Amount</b></label>
+
+            <!-- First Row: Inputs -->
+            <div class="input-row">
+                <input type="text" id="description1" name="description" list="descriptionList1">
+                <datalist id="descriptionList1">
+                    <option value="Service A">
+                    <option value="Service B">
+                    <option value="Service C">
+                    <option value="Consulting">
+                    <option value="Development">
+                    <option value="Support">
+                </datalist>
+                <input type="number" id="quantity1" name="quantity" onchange="calculateTotal(this)" placeholder="Quantity/Hr">
+                <input type="number" id="price1" name="price" onchange="calculateTotal(this)" placeholder="Price">
+                <input type="number" id="discount1" name="discount" onchange="calculateTotal(this)" placeholder="Discount %">
+                <input type="number" id="total1" name="total" placeholder="Total Amount" readonly>
+            </div>
+        </div>
+    </div>
+
+    <!-- This is where new rows will be appended -->
+    <div id="spDiv"></div>
+
+    <br><br>
+
+    <div style="margin: 20px; display: flex; justify-content: center; align-items: center;">
+        <button id="btn1" onclick="addDescriptionItems()">Add More Description Items</button>
+        <button id="btn2" onclick="createinvoice()" style="margin-left: 10px;">Create Invoice</button>
+    </div>
+
+</body>
+</html>
