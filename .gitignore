@@ -95,3 +95,6 @@ invoices/
 # If PDFs are saved in a specific subdirectory (e.g., 'invoices/<date>/')
 invoices/*/*.pdf
 
+# Ignore config file containing sensitive information
+config.ini
+

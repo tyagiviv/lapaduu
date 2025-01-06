@@ -20,14 +20,14 @@ function addDescriptionItems() {
         <div class="input-row">
             <input type="text" id="description${rowCount}" name="description" list="descriptionList${rowCount}">
             <datalist id="descriptionList${rowCount}">
-                <option value="Service A">
-                <option value="Service B">
-                <option value="Service C">
-                <option value="Consulting">
-                <option value="Development">
-                <option value="Support">
+                <option value="LapaDuu Komplekt">
+                <option value="Lotte">
+                <option value="Petrol">
+                <option value="Smart Post">
+                <option value="Omnivaa">
+                <option value="Shipping">
             </datalist>
-            <input type="number" id="quantity${rowCount}" name="quantity" onchange="calculateTotal(this)" placeholder="Quantity/Hr">
+            <input type="number" id="quantity${rowCount}" name="quantity" value="1" onchange="calculateTotal(this)" placeholder="Quantity/Hr">
             <input type="number" id="price${rowCount}" name="price" onchange="calculateTotal(this)" placeholder="Price">
             <input type="number" id="discount${rowCount}" name="discount" onchange="calculateTotal(this)" placeholder="Discount %">
             <input type="number" id="total${rowCount}" name="total" placeholder="Total Amount" readonly>
@@ -159,6 +159,12 @@ function createinvoice() {
     .then(data => {
         if (data.success) {
             alert("Invoice created successfully! You can download it from: " + data.filename);
+
+            // Show email status message if available
+            if (data.email_status) {
+                alert(data.email_status);  // Show email success/failure message
+            }
+
             resetForm();
             fetchNextInvoiceNumber();  // Fetch the next invoice number after successful creation
         } else {
@@ -167,7 +173,7 @@ function createinvoice() {
     })
     .catch(error => {
         console.error("Error:", error);
-        alert("There was an error creating the invoice");
+        alert("Error: " + error.message);  // Display specific error message
     });
 }
 
@@ -195,9 +201,9 @@ function resetForm() {
 
     // Reset description rows
     for (let i = 1; i <= rowCount; i++) {
-        document.getElementById(`description${i}`).value = "";
-        document.getElementById(`quantity${i}`).value = "";
-        document.getElementById(`price${i}`).value = "";
+        document.getElementById(`description${i}`).value = "LapaDuu Komplekt";
+        document.getElementById(`quantity${i}`).value = "1";
+        document.getElementById(`price${i}`).value = "23";
         document.getElementById(`discount${i}`).value = "";
         document.getElementById(`total${i}`).value = "";
     }
@@ -217,3 +223,16 @@ function resetForm() {
         fetchNextInvoiceNumber(); // Fetch the new invoice number
     }, 500);  // Delay in milliseconds, you can adjust this value
 }
+
+// Ensure the script waits for the DOM to load before running this
+document.addEventListener("DOMContentLoaded", function() {
+    // Automatically calculate total for the first row if pre-filled
+    const firstRow = document.querySelector('.inputfieldStyledescription'); // Selects the first dynamically created row
+    const quantity = firstRow.querySelector('input[name="quantity"]');
+    const price = firstRow.querySelector('input[name="price"]');
+
+    // Trigger calculation for the first row if values are pre-filled
+    if (quantity.value && price.value) {
+        calculateTotal(quantity); // Trigger calculation using quantity as a reference
+    }
+});

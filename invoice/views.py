@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
-from .utils import get_next_invoice_number
+from .utils import get_next_invoice_number, send_invoice
 from .models import Invoice, Description
 from datetime import datetime
 import os
@@ -87,11 +87,11 @@ def generate_invoice(request):
             data = json.loads(request.body)
 
             # Access the fields from the parsed data
-            client_email = data.get('clientEmail')
+            client_email = data.get('clientEmail').strip()
             invoice_date = data.get('invoiceDate')
-            client_name = data.get('clientName')
-            client_address = data.get('clientAddress')
-            registration_code = data.get('registrationCode')
+            client_name = data.get('clientName').strip()
+            client_address = data.get('clientAddress').strip()
+            registration_code = data.get('registrationCode').strip()
             due_date = data.get('dueDate')
             mark_as_paid = data.get('markAsPaid', False)  # Add the mark_as_paid field
 
@@ -101,11 +101,45 @@ def generate_invoice(request):
             discounts = data.get('discounts', [])
             totals = data.get('totals', [])
 
-            if not client_email or not invoice_date or not client_name:
-                return JsonResponse({'error': 'Missing required fields!'}, status=400)
+            # If client name is empty, set default value 'ERAISIK'
+            if not client_name:
+                client_name = 'ERAISIK'
+
+            # If all client fields are empty, set default values for other fields
+            if not client_email:
+                client_email = ' '  # You can customize this
+            if not client_address:
+                client_address = ' '  # You can customize this
+            if not registration_code:
+                registration_code = ' '  # Optional, can be kept empty if needed
+
+
+            if not invoice_date or not client_name:
+                missing_fields = []
+                if not invoice_date:
+                    missing_fields.append('Invoice date')
+                if not client_name:
+                    missing_fields.append('Client name')
+
+                return JsonResponse({'error': f'Missing required '
+                                              f'fields: {", ".join(missing_fields)}!'}, status=400)
+
 
             if not descriptions or not quantities or not prices or not discounts or not totals:
-                return JsonResponse({'error': 'Missing description data!'}, status=400)
+                missing_data = []
+                if not descriptions:
+                    missing_data.append('Descriptions')
+                if not quantities:
+                    missing_data.append('Quantities')
+                if not prices:
+                    missing_data.append('Prices')
+                if not discounts:
+                    missing_data.append('Discounts')
+                if not totals:
+                    missing_data.append('Totals')
+
+                return JsonResponse({'error': f'Missing data: {", ".join(missing_data)}!'}, status=400)
+
 
             # Create the invoice with the generated invoice number
             total_amount = sum([float(total) for total in totals])
@@ -242,12 +276,41 @@ def generate_invoice(request):
 
             doc.build(elements)
 
+            # Send the email after the invoice is generated
+            email_sent = False  # Default value
+
+            if client_email and client_email.strip():  # Ensure the email is not empty or invalid
+                email_sent = send_invoice(client_email, pdf_filename)
+
+            # Prepare email status message only if an email was sent or failed
+            email_status = None
+            if email_sent:
+                email_status = 'Email sent successfully!'
+            elif client_email.strip():  # Only provide this message if email is provided
+                email_status = 'Failed to send email.'
+
+
             # Return the next invoice number in the response (after the invoice creation)
-            return JsonResponse({
+            #if email_sent:
+            #    email_status = 'Email sent successfully!'
+            #else:
+            #    email_status = 'No email sent or invalid email.'
+
+
+            # Return the next invoice number in the response (after the invoice creation)
+            response_data = {
                 'success': True,
                 'filename': pdf_filename,
-                'next_invoice_number': invoice_number + 1  # Increment the number for the next invoice
-            })
+                'next_invoice_number': invoice_number + 1,  # Increment the number for the next invoice
+            #    'email_status': email_status
+
+            }
+
+            # Include email_status in the response only if it is set
+            if email_status:
+                response_data['email_status'] = email_status
+
+            return JsonResponse(response_data)
 
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON format'}, status=400)

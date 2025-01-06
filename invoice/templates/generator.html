@@ -80,17 +80,17 @@
 
             <!-- First Row: Inputs -->
             <div class="input-row">
-                <input type="text" id="description1" name="description" list="descriptionList1">
+                <input type="text" id="description1" name="description" list="descriptionList1" value="LapaDuu Komplekt">
                 <datalist id="descriptionList1">
-                    <option value="Service A">
-                    <option value="Service B">
-                    <option value="Service C">
-                    <option value="Consulting">
-                    <option value="Development">
-                    <option value="Support">
+                    <option value="LapaDuu Komplekt">
+                    <option value="Lotte">
+                    <option value="Petrol">
+                    <option value="Smart Post">
+                    <option value="Omnivaa">
+                    <option value="Shipping">
                 </datalist>
-                <input type="number" id="quantity1" name="quantity" onchange="calculateTotal(this)" placeholder="Quantity/Hr">
-                <input type="number" id="price1" name="price" onchange="calculateTotal(this)" placeholder="Price">
+                <input type="number" id="quantity1" name="quantity" value="1" onchange="calculateTotal(this)" placeholder="Quantity/Hr">
+                <input type="number" id="price1" name="price" value="23" onchange="calculateTotal(this)" placeholder="Price">
                 <input type="number" id="discount1" name="discount" onchange="calculateTotal(this)" placeholder="Discount %">
                 <input type="number" id="total1" name="total" placeholder="Total Amount" readonly>
             </div>
