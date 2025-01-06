@@ -118,11 +118,12 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 
 # Add the static files directories
 STATICFILES_DIRS = [
-    BASE_DIR / 'static',  # This will look for static files in a folder named "static" at the root of the project
+    os.path.join(BASE_DIR, 'static'),  # Root-level static directory
+    os.path.join(BASE_DIR, 'invoice', 'static'),  # App-specific static directory
 ]
 
 

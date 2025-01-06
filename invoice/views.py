@@ -6,9 +6,75 @@ from .models import Invoice, Description
 from datetime import datetime
 import os
 import json
+from django.conf import settings
 from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+from reportlab.lib.enums import TA_RIGHT, TA_LEFT
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from reportlab.platypus import PageTemplate, Frame
+
+
+# Footer function
+def add_footer(canvas, _doc):
+    canvas.saveState()
+    width, height = letter
+    line_position = inch  # Set line position from the bottom
+
+    # Draw a solid line above the footer
+    canvas.setLineWidth(1)
+    canvas.line(0.75 * inch, line_position + 0.2 * inch, width - 0.75 * inch, line_position + 0.2 * inch)
+
+    # Set font for the footer
+    canvas.setFont("Helvetica", 9)
+
+    # Footer contents
+    footer_part1 = [
+        ("LapaDuu OÜ", 0.75 * inch),  # Name
+        ("Reg.nr 14842122", 3.2 * inch),  # Registration number
+        ("Swedbank: EE122200221072678443", 5.5 * inch)  # Bank info
+    ]
+
+    footer_part2 = [
+        ("Pärnu mnt 129b-14, Tallinn", 0.75 * inch),  # Address
+        ("Tel: +372 53702287", 3.2 * inch),  # Phone number
+    ]
+
+    footer_part3 = [
+        ("Harjumaa, 11314", 0.75 * inch),  # County and postal code
+        ("email: lapaduu@lapaduu.ee", 3.2 * inch)  # Email
+    ]
+
+    # Draw footer contents
+    for text, x_position in footer_part1:
+        canvas.drawString(x_position, line_position - 10, text)
+
+    for text, x_position in footer_part2:
+        canvas.drawString(x_position, line_position - 25, text)
+
+    for text, x_position in footer_part3:
+        canvas.drawString(x_position, line_position - 40, text)
+
+    # Set color to blue for the email link
+    canvas.setFillColor(colors.blue)
+
+    # Draw the email text
+    email_x = 3.2 * inch  # Same position as the email text
+    email_y = line_position - 40  # Corresponding y position
+    canvas.drawString(email_x, email_y, "email: lapaduu@lapaduu.ee")
+
+    # Draw an underline for the email
+    email_text_width = canvas.stringWidth("email: lapaduu@lapaduu.ee", "Helvetica", 9)
+    canvas.setLineWidth(0.5)  # Set line width for underline
+    canvas.line(email_x, email_y - 2, email_x + email_text_width, email_y - 2)  # Draw the underline
+
+    # Create a clickable email link
+    canvas.linkURL("mailto:lapaduu@lapaduu.ee", (email_x, email_y - 5, email_x + 100, email_y + 5), relative=1)
+
+    # Restore the canvas state
+    canvas.restoreState()
+
 
 @login_required
 def generate_invoice(request):
@@ -27,6 +93,7 @@ def generate_invoice(request):
             client_address = data.get('clientAddress')
             registration_code = data.get('registrationCode')
             due_date = data.get('dueDate')
+            mark_as_paid = data.get('markAsPaid', False)  # Add the mark_as_paid field
 
             descriptions = data.get('descriptions', [])
             quantities = data.get('quantities', [])
@@ -44,13 +111,15 @@ def generate_invoice(request):
             total_amount = sum([float(total) for total in totals])
 
             invoice = Invoice.objects.create(
+                user=request.user,  # Associate the logged-in user with the invoice
                 invoice_number=invoice_number,
                 client_name=client_name,
                 client_email=client_email,
                 client_address=client_address,
                 registration_code=registration_code,
                 due_date=due_date,
-                total_amount=total_amount
+                total_amount=total_amount,
+                mark_as_paid=mark_as_paid
             )
 
             # Create Description entries for the invoice
@@ -71,31 +140,105 @@ def generate_invoice(request):
             pdf_filename = os.path.join(folder_path, f"Invoice_{invoice_number}.pdf")
 
             doc = SimpleDocTemplate(pdf_filename, pagesize=letter)
+
+            # Create a PageTemplate that includes the footer
+            frame = Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height, id='normal')
+            template = PageTemplate(id='footer', frames=frame, onPage=add_footer)
+            doc.addPageTemplates([template])
+
             elements = []
-            elements.append(Paragraph(f"Invoice #{invoice_number}", getSampleStyleSheet()['Title']))
+
+            logo_path = os.path.join(settings.BASE_DIR, 'invoice', 'static', 'logo.png')
+            print(f"Resolved logo path: {logo_path}")
+
+            # Verify the logo file exists
+            if not os.path.exists(logo_path):
+                return JsonResponse({'error': 'Logo file not found!'}, status=500)
+
+            logo = Image(logo_path)
+            logo.drawWidth = 100
+            logo.drawHeight = 85
 
             # Prepare the table data
-            table_data = [['Description', 'Quantity', 'Price', 'Discount', 'Total']]  # Table headers
+            title_table = Table([[logo, Paragraph("LapaDuu OÜ", getSampleStyleSheet()['Title'])]],
+                                colWidths=[100, None])
+            title_table.setStyle(TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+                ('ALIGN', (1, 0), (1, 0), 'LEFT')
+            ]))
+            elements.append(title_table)
+
+            left_text = f"Klient: {client_name}\nAddress: {client_address}\nReg kood: {registration_code}"
+            right_text = (f"Arve nr: {invoice_number}\nArve kuupäev: {invoice_date}"
+                          f"\nMakse tähtaeg: {due_date}\nViivis: 0,15% päevas")
+
+            left_table = Table([[Paragraph(line, getSampleStyleSheet()['Normal'])] for line in left_text.split('\n')])
+            left_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP')
+            ]))
+
+            right_table = Table([[Paragraph(line, getSampleStyleSheet()['Normal'])] for line in right_text.split('\n')])
+            right_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP')
+            ]))
+
+            client_details = Table([[left_table, right_table]], colWidths=[250, 250])
+            elements.append(client_details)
+
+            elements.append(Spacer(1, 20))
+
+            # Check if the invoice is marked as paid
+            print(f"Mark as Paid: {mark_as_paid}")  # Debugging line
+            if mark_as_paid:
+                # Use your custom style for the "Paid" label
+                paid_label_style = getSampleStyleSheet()['Title']
+                paid_label_style.textColor = colors.green  # Set text color to green
+                paid_label = Paragraph("<b>Paid</b>", paid_label_style)
+                elements.append(paid_label)
+
+
+
+            discounts_present = any(float(d) > 0 for d in discounts)
+            if discounts_present:
+                data = [['Teenus/kaup', 'Ühiku hind', 'Kogus/h', 'Discount (%)', 'Summa']]
+            else:
+                data = [['Teenus/kaup', 'Ühiku hind', 'Kogus/h', 'Summa']]
+
             for i in range(len(descriptions)):
                 row = [
-                    descriptions[i],
+                    Paragraph(descriptions[i], getSampleStyleSheet()['Normal']),
+                    f"{float(prices[i]):.2f}",
                     quantities[i],
-                    prices[i],
                 ]
-                # Include the discount only if it's non-zero
-                discount_value = discounts[i]
-                if float(discount_value) > 0:
-                    row.append(f"{discount_value}%")
-                else:
-                    row.append("")  # Leave the discount cell blank
+                if discounts_present:
+                    row.append(f"{discounts[i]}%" if discounts[i] else '')
+                row.append(f"{float(totals[i]):.2f}")
+                data.append(row)
 
-                row.append(totals[i])
-                table_data.append(row)
-
-            table = Table(table_data)
+            table = Table(data, colWidths=[200, 100, 100, 100, 100] if discounts_present else [200, 100, 100, 100])
+            table.setStyle(TableStyle([
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP')
+            ]))
             elements.append(table)
-            elements.append(Spacer(1, 12))
-            elements.append(Paragraph(f"Total Amount: {total_amount:.2f} EUR", getSampleStyleSheet()['Normal']))
+
+            elements.append(Spacer(1, 20))
+
+            right_align_style = ParagraphStyle(name='RightAlign', parent=getSampleStyleSheet()['Normal'],
+                                               alignment=TA_RIGHT)
+            elements.append(Paragraph("Käibemaks: Ei ole KM kohuslane", right_align_style))
+            elements.append(Paragraph(f"<b>Arve summa kokku (EUR): {total_amount:.2f}</b>", right_align_style))
+
+            left_align_style = ParagraphStyle(name='LeftAlign', parent=getSampleStyleSheet()['Normal'],
+                                              alignment=TA_LEFT)
+            elements.append(Spacer(1, 100))
+            elements.append(Paragraph("Palume arve tasumisel märkida selgitusse arve number.", left_align_style))
+            elements.append(Paragraph("LapaDuu OÜ ei ole käibemaksukohuslane.", left_align_style))
 
             doc.build(elements)
 

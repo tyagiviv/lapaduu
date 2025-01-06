@@ -88,6 +88,7 @@ function createinvoice() {
     var clientAddress = document.getElementById("clientAddress").value;
     var registrationCode = document.getElementById("registrationCode").value;
     var dueDate = document.getElementById("dueDate").value;
+    var markAsPaid = document.getElementById("markAsPaid").checked;  // True if checked, false otherwise
 
     // Collect description items (dynamically generated rows)
     var descriptions = [];
@@ -131,8 +132,11 @@ function createinvoice() {
         quantities: quantities,
         prices: prices,
         discounts: discounts,
-        totals: totals
+        totals: totals,
+        markAsPaid: markAsPaid // Include the mark as paid status
     };
+
+    console.log("Mark as Paid:", markAsPaid);
 
     // Make an AJAX request to the server to generate the invoice
     fetch(generateInvoiceUrl, {
@@ -197,6 +201,9 @@ function resetForm() {
         document.getElementById(`discount${i}`).value = "";
         document.getElementById(`total${i}`).value = "";
     }
+
+    // Reset the "Mark as Paid" checkbox
+    document.getElementById("markAsPaid").checked = false;
 
     // Optionally, reset the row count if you want to start from the first row
     rowCount = 1;
