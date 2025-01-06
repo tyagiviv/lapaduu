@@ -287,14 +287,7 @@ def generate_invoice(request):
             if email_sent:
                 email_status = 'Email sent successfully!'
             elif client_email.strip():  # Only provide this message if email is provided
-                email_status = 'Failed to send email.'
-
-
-            # Return the next invoice number in the response (after the invoice creation)
-            #if email_sent:
-            #    email_status = 'Email sent successfully!'
-            #else:
-            #    email_status = 'No email sent or invalid email.'
+                email_status = 'Failed to send email. Maybe wrong email address'
 
 
             # Return the next invoice number in the response (after the invoice creation)
@@ -302,7 +295,6 @@ def generate_invoice(request):
                 'success': True,
                 'filename': pdf_filename,
                 'next_invoice_number': invoice_number + 1,  # Increment the number for the next invoice
-            #    'email_status': email_status
 
             }
 
